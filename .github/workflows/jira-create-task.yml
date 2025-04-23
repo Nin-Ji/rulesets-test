@@ -8,23 +8,26 @@ jobs:
   create-jira-task:
     if: startsWith(github.head_ref, 'dependabot')
     runs-on: ubuntu-latest
+    name: Create Jira Task
 
     steps:
-      - name: Create Jira Task
+      - name: Jira Login
+        uses: atlassian/gajira-login@v3
         env:
+          JIRA_BASE_URL: ${{ secrets.JIRA_BASE_URL }}
           JIRA_USER_EMAIL: ${{ secrets.JIRA_USER_EMAIL }}
           JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
-          JIRA_BASE_URL: ${{ secrets.JIRA_BASE_URL }}
-          JIRA_PROJECT_KEY: "TR" 
-        run: |
-          curl -X POST "$JIRA_BASE_URL/rest/api/3/issue" \
-            -u "$JIRA_USER_EMAIL:$JIRA_API_TOKEN" \
-            -H "Content-Type: application/json" \
-            -d '{
-              "fields": {
-                "project": { "key": "'"$JIRA_PROJECT_KEY"'" },
-                "summary": "dependabot: '"${{ github.event.pull_request.title }}"'",
-                "description": "A new dependabot PR has been created.\n\nPR Title: ${{ github.event.pull_request.title }}\nPR URL: ${{ github.event.pull_request.html_url }}",
-                "issuetype": { "name": "Task" }
-              }
-            }'
+
+      - name: Jira Create Issue
+        uses: atlassian/gajira-create@v2.0.1
+        with:
+          project: TR
+          issuetype: Task
+          summary: |
+            dependabot PR: ${{ github.event.pull_request.title }}
+          description: |
+            A new dependabot PR has been created.
+
+            - **Title**: ${{ github.event.pull_request.title }}
+            - **URL**: ${{ github.event.pull_request.html_url }}
+
