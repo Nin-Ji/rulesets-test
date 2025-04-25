@@ -1,14 +1,13 @@
-name: Create Jira Task on Dependabot PR
+name: Create or Update Jira Task on Dependabot PR
 
 on:
   pull_request:
     types: [opened, labeled]
 
 jobs:
-  create-jira-task:
+  create-or-update-jira:
     if: startsWith(github.head_ref, 'dependabot')
     runs-on: ubuntu-latest
-    name: Create Jira Task
 
     steps:
       - name: Checkout code
@@ -20,7 +19,28 @@ jobs:
           labels=$(curl -s -H "Authorization: Bearer ${{ secrets.MY_GITHUB_TOKEN }}" \
             https://api.github.com/repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/labels \
             | jq -r '.[].name' | paste -sd "," -)
-          echo "labels=$labels" >> "$GITHUB_OUTPUT"
+          echo "labels=$labels" >> $GITHUB_OUTPUT
+
+      - name: Compose Jira summary
+        id: compose
+        run: |
+          summary="dependabot:[${{ steps.get-labels.outputs.labels }}] ${{ github.event.pull_request.title }}"
+          echo "summary=$summary"
+          echo "summary=$summary" >> $GITHUB_OUTPUT
+
+      - name: Search for existing Jira issue
+        id: jira-search
+        run: |
+          summary="${{ steps.compose.outputs.summary }}"
+          jql="summary = \"${summary}\" AND project = TR"
+          echo "JQL: $jql"
+          issue=$(curl -s -u "${{ secrets.JIRA_USER_EMAIL }}:${{ secrets.JIRA_API_TOKEN }}" \
+            -G --data-urlencode "jql=$jql" \
+            -H "Accept: application/json" \
+            "${{ secrets.JIRA_BASE_URL }}/rest/api/2/search" | jq -r '.issues[0].key')
+
+          echo "Found issue: $issue"
+          echo "issue_key=$issue" >> $GITHUB_OUTPUT
 
       - name: Jira Login
         uses: atlassian/gajira-login@v3
@@ -29,20 +49,32 @@ jobs:
           JIRA_USER_EMAIL: ${{ secrets.JIRA_USER_EMAIL }}
           JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
 
-      - name: Jira Create Task
+      - name: Create Jira Task (if not found)
+        if: steps.jira-search.outputs.issue_key == ''
         uses: atlassian/gajira-create@v3
         with:
           project: TR
           issuetype: Task
-          summary: |
-            dependabot:${{ github.event.pull_request.title }}
+          summary: ${{ steps.compose.outputs.summary }}
           description: |
             dependabot PRが作成されました。
 
-            - *Title*:[${{ steps.get-labels.outputs.labels }}]${{ github.event.pull_request.title }}
+            - *Title*: ${{ github.event.pull_request.title }}
             - *URL*: ${{ github.event.pull_request.html_url }}
+            - *Labels*: ${{ steps.get-labels.outputs.labels }}
           fields: |
             {
-             "customfield_10014": "TR-1740"
+              "customfield_10014": "TR-1740"
             }
 
+      - name: Comment on existing Jira issue (if found)
+        if: steps.jira-search.outputs.issue_key != ''
+        uses: atlassian/gajira-comment@v3
+        with:
+          issue: ${{ steps.jira-search.outputs.issue_key }}
+          comment: |
+            dependabot PRが更新されました。
+
+            - *Title*: ${{ github.event.pull_request.title }}
+            - *URL*: ${{ github.event.pull_request.html_url }}
+            - *Current Labels*: ${{ steps.get-labels.outputs.labels }}
