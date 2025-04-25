@@ -34,11 +34,12 @@ jobs:
           summary="${{ steps.compose.outputs.summary }}"
           jql="summary = \"${summary}\" AND project = TR"
           echo "JQL: $jql"
-          issue=$(curl -s -u "${{ secrets.JIRA_USER_EMAIL }}:${{ secrets.JIRA_API_TOKEN }}" \
+          response=$(curl -s -u "${{ secrets.JIRA_USER_EMAIL }}:${{ secrets.JIRA_API_TOKEN }}" \
             -G --data-urlencode "jql=$jql" \
             -H "Accept: application/json" \
-            "${{ secrets.JIRA_BASE_URL }}/rest/api/2/search" | jq -r '.issues[0].key')
+            "${{ secrets.JIRA_BASE_URL }}/rest/api/2/search")
 
+          issue=$(echo "$response" | jq -r '.issues[0].key // empty')
           echo "Found issue: $issue"
           echo "issue_key=$issue" >> $GITHUB_OUTPUT
 
