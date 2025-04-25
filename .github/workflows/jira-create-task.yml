@@ -24,15 +24,15 @@ jobs:
       - name: Compose Jira summary
         id: compose
         run: |
-          summary="dependabot:[${{ steps.get-labels.outputs.labels }}] ${{ github.event.pull_request.title }}"
-          echo "summary=$summary"
-          echo "summary=$summary" >> $GITHUB_OUTPUT
+          summary_prefix="dependabot:${{ github.event.pull_request.number }}"
+          full_summary="${summary_prefix} [${{ steps.get-labels.outputs.labels }}] ${{ github.event.pull_request.title }}"
+          echo "summary_prefix=$summary_prefix" >> $GITHUB_OUTPUT
+          echo "summary=$full_summary" >> $GITHUB_OUTPUT
 
       - name: Search for existing Jira issue
         id: jira-search
         run: |
-          summary="${{ steps.compose.outputs.summary }}"
-          jql="summary = \"${summary}\" AND project = TR"
+          jql="summary ~ \"${{ steps.compose.outputs.summary_prefix }}\" AND project = TR"
           echo "JQL: $jql"
           response=$(curl -s -u "${{ secrets.JIRA_USER_EMAIL }}:${{ secrets.JIRA_API_TOKEN }}" \
             -G --data-urlencode "jql=$jql" \
@@ -62,7 +62,6 @@ jobs:
 
             - *Title*: ${{ github.event.pull_request.title }}
             - *URL*: ${{ github.event.pull_request.html_url }}
-            - *Labels*: ${{ steps.get-labels.outputs.labels }}
           fields: |
             {
               "customfield_10014": "TR-1740"
@@ -78,4 +77,3 @@ jobs:
 
             - *Title*: ${{ github.event.pull_request.title }}
             - *URL*: ${{ github.event.pull_request.html_url }}
-            - *Current Labels*: ${{ steps.get-labels.outputs.labels }}
