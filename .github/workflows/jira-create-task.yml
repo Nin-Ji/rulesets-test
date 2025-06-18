@@ -61,7 +61,7 @@ jobs:
 
           body=$(gh api repos/$repo/pulls/$pr_number --jq .body)
 
-          new_body="$(echo -e "$body\n\n[Jira Task]($JIRA_BASE_URL/browse/$issue_key)")"
+          new_body="$(echo -e "$body\n\n[Jira Task](${JIRA_BASE_URL}/browse/$issue_key)")"
 
           gh api --method PATCH repos/$repo/pulls/$pr_number \
             -f body="$new_body"
