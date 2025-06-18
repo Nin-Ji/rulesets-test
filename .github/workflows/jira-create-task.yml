@@ -30,6 +30,7 @@ jobs:
           JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
 
       - name: Jira Create Task
+        id: create
         uses: atlassian/gajira-create@v3
         with:
           project: TR
@@ -45,3 +46,18 @@ jobs:
             {
              "customfield_10014": "TR-1740"
             }
+      
+      - name: Append Jira task link to PR body
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          issue_key="${{ steps.create.outputs.issue }}"
+          pr_number=${{ github.event.pull_request.number }}
+          repo=${{ github.repository }}
+
+          body=$(gh api repos/$repo/pulls/$pr_number --jq .body)
+
+          new_body="${body}\n\n[Jira Task](${{ secrets.JIRA_BASE_URL }}/browse/$issue_key)"
+
+          gh api --method PATCH repos/$repo/pulls/$pr_number \
+            -f body="$new_body"
