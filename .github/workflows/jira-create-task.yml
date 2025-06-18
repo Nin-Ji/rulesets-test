@@ -4,6 +4,9 @@ on:
   pull_request:
     types: [opened]
 
+permissions:
+  pull-requests: write
+  
 jobs:
   create-jira-task:
     if: startsWith(github.head_ref, 'dependabot')
