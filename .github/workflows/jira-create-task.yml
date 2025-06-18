@@ -6,6 +6,7 @@ on:
 
 permissions:
   pull-requests: write
+  contents: read
   
 jobs:
   create-jira-task:
@@ -20,7 +21,7 @@ jobs:
       - name: Get PR labels
         id: get-labels
         run: |
-          labels=$(curl -s -H "Authorization: Bearer ${{ secrets.MY_GITHUB_TOKEN }}" \
+          labels=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
             https://api.github.com/repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/labels \
             | jq -r '.[].name' | paste -sd "," -)
           echo "labels=$labels" >> "$GITHUB_OUTPUT"
