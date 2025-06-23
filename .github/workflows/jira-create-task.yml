@@ -50,8 +50,8 @@ jobs:
             {
              "customfield_10014": "TR-1740"
             }
-      
-      - name: Append Jira task link to PR body
+
+      - name: Append Jira issue key to PR title (at the end)
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -59,9 +59,13 @@ jobs:
           pr_number=${{ github.event.pull_request.number }}
           repo=${{ github.repository }}
 
-          body=$(gh api repos/$repo/pulls/$pr_number --jq .body)
+          title=$(gh api repos/$repo/pulls/$pr_number --jq .title)
 
-          new_body="$(echo -e "$body\n\n[Jira Task]\n${{ secrets.JIRA_BASE_URL }}/browse/$issue_key")"
-
-          gh api --method PATCH repos/$repo/pulls/$pr_number \
-            -f body="$new_body"
+          if [[ "$title" != *"$issue_key"* ]]; then
+            new_title="$title [$issue_key]"
+            echo "Updating title to: $new_title"
+            gh api --method PATCH repos/$repo/pulls/$pr_number \
+              -f title="$new_title"
+          else
+            echo "Title already contains Jira key."
+          fi
