@@ -62,7 +62,7 @@ jobs:
           title=$(gh api repos/$repo/pulls/$pr_number --jq .title)
 
           if [[ "$title" != *"$issue_key"* ]]; then
-            new_title="$title [$issue_key]"
+            new_title="$title $issue_key"
             echo "Updating title to: $new_title"
             gh api --method PATCH repos/$repo/pulls/$pr_number \
               -f title="$new_title"
