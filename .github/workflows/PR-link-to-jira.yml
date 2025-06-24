@@ -1,0 +1,38 @@
+name: Update PR Title for Jira Link
+
+on:
+  schedule:
+    - cron: '0 21 * * *' 
+  workflow_dispatch:
+
+permissions:
+  pull-requests: write
+  contents: read
+
+jobs:
+  update-pr-titles:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: List open PRs with dependabot branches
+        id: list-prs
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          prs=$(gh pr list --state open --json number,title,headRefName --jq '.[] | select(.headRefName | startswith("dependabot")) | [.number, .title] | @tsv')
+          echo "$prs" > prs.txt
+
+      - name: Append space to PR titles if needed
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          while IFS=$'\t' read -r number title; do
+            if [[ "$title" != *" " ]]; then
+              echo "Updating PR #$number title: '$title' → '${title} '"
+              gh pr edit "$number" --title "${title} "
+            else
+              echo "PR #$number already ends with a space. Skipping."
+            fi
+          done < prs.txt
