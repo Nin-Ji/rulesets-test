@@ -28,6 +28,11 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          if [[ ! -s prs.txt ]]; then
+            echo "No matching PRs found. Exiting gracefully."
+            exit 0
+          fi
+
           while IFS=$'\t' read -r number title; do
             if [[ "$title" != *" " ]]; then
               echo "Updating PR #$number title: '$title' → '${title} '"
