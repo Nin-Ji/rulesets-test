@@ -28,12 +28,17 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          if [[ ! -s prs.txt ]]; then
+          if [[ "$(wc -l < prs.txt)" -eq 0 ]]; then
             echo "No matching PRs found. Exiting gracefully."
             exit 0
           fi
 
           while IFS=$'\t' read -r number title; do
+            if [[ -z "$number" || -z "$title" ]]; then
+              echo "Skipping empty line."
+              continue
+            fi
+
             if [[ "$title" != *" " ]]; then
               echo "Updating PR #$number title: '$title' → '${title} '"
               gh pr edit "$number" --title "${title} "
