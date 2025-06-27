@@ -19,14 +19,14 @@ jobs:
       - name: List open PRs with dependabot branches
         id: list-prs
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.MY_GITHUB_TOKEN }}
         run: |
           prs=$(gh pr list --state open --json number,title,headRefName --jq '.[] | select(.headRefName | startswith("dependabot")) | [.number, .title] | @tsv')
           echo "$prs" > prs.txt
 
       - name: Append space to PR titles if needed
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.MY_GITHUB_TOKEN }}
         run: |
           if [[ "$(wc -l < prs.txt)" -eq 0 ]]; then
             echo "No matching PRs found. Exiting gracefully."
